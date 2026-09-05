@@ -29,3 +29,7 @@ See `data/README.md`.
 
 ```r
 source("scripts/teratozoospermia_kinase_meta.R")
+
+## Citation
+
+Please cite the paper above.
