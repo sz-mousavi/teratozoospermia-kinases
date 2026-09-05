@@ -28,13 +28,4 @@ See `data/README.md`.
 ## How to run
 
 ```r
-# from the repository root, after GEO files are in data/
 source("scripts/teratozoospermia_kinase_meta.R")
-
-## Data policy
-
-Public datasets only.
-
-## Citation
-
-Please cite the paper above.
