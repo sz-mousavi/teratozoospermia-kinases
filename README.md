@@ -9,7 +9,8 @@ Code accompanying:
 
 ## Method
 
-Meta-analysis of public microarray datasets comparing teratozoospermia and normozoospermia.  
+Meta-analysis of public microarray datasets comparing teratozoospermia and normozoospermia.
+
 Steps: annotation merge, ComBat batch correction, quantile normalization, limma differential expression.
 
 ## Datasets
@@ -27,8 +28,9 @@ See `data/README.md`.
 
 ## How to run
 
-```r
-source("scripts/teratozoospermia_kinase_meta.R")
+    source("scripts/teratozoospermia_kinase_meta.R")
+
+Outputs are written to `results/`.
 
 ## Citation
 
