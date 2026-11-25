@@ -3,7 +3,12 @@
 # Paper: JRI 2025;26(4):224
 # DOI: https://doi.org/10.18502/jri.v26i4.21088
 
-# Put GEO series matrices and GPL annotation files in data/
+# Script version of meta_analysis_teratozoospermia/teratozoospermia_kinase_meta.Rmd
+# (the Rmd is the annotated notebook of the same analysis).
+#
+# Run from the repository root:  Rscript scripts/teratozoospermia_kinase_meta.R
+#
+# Put GEO series matrices and GPL annotation tables in data/ (see data/README.md)
 # GSE6967_series_matrix.txt + GPL2507.txt
 # GSE6968_series_matrix.txt + GPL2700.txt
 # GSE6872_series_matrix.txt + GPL570.txt
@@ -18,6 +23,19 @@ library(dplyr)
 data_dir <- "data"
 out_dir <- "results"
 dir.create(out_dir, showWarnings = FALSE)
+
+needed <- c(
+  "GSE6967_series_matrix.txt",
+  "GSE6968_series_matrix.txt",
+  "GSE6872_series_matrix.txt",
+  "GPL2507.txt",
+  "GPL2700.txt",
+  "GPL570.txt"
+)
+missing <- needed[!file.exists(file.path(data_dir, needed))]
+if (length(missing)) {
+  stop("Missing files in ", data_dir, "/:\n  ", paste(missing, collapse = "\n  "))
+}
 
 data1 <- read.delim(file.path(data_dir, "GSE6967_series_matrix.txt"))
 data2 <- read.delim(file.path(data_dir, "GSE6968_series_matrix.txt"))
@@ -80,9 +98,11 @@ pc <- prcomp(allm)
 pcr <- data.frame(pc$rotation[, 1:3], batch)
 
 pdf(file.path(out_dir, "PCAbatch.pdf"))
-ggplot(pcr, aes(PC1, PC2, color = batch)) +
-  geom_point() +
-  theme_bw()
+print(
+  ggplot(pcr, aes(PC1, PC2, color = batch)) +
+    geom_point() +
+    theme_bw()
+)
 dev.off()
 
 allc <- ComBat(allm, batch)
@@ -101,9 +121,11 @@ pc <- prcomp(allm)
 pcr <- data.frame(pc$rotation[, 1:3], batch)
 
 pdf(file.path(out_dir, "PCAbatch_after_Normalization.pdf"))
-ggplot(pcr, aes(PC1, PC2, color = batch)) +
-  geom_point() +
-  theme_bw()
+print(
+  ggplot(pcr, aes(PC1, PC2, color = batch)) +
+    geom_point() +
+    theme_bw()
+)
 dev.off()
 
 allm <- as.data.frame(allm)
@@ -116,6 +138,7 @@ gr <- c(
   rep("terato", 6), rep("normo", 4),
   rep("normo", 13), rep("terato", 8)
 )
+stopifnot(length(gr) == ncol(allm))
 
 pdf(file.path(out_dir, "boxplotallm.pdf"))
 boxplot(allm)
@@ -126,10 +149,12 @@ pc <- prcomp(exs)
 pcr <- data.frame(pc$rotation[, 1:2], Group = gr)
 
 pdf(file.path(out_dir, "PCAallm.pdf"))
-ggplot(pcr, aes(PC1, PC2, color = Group, label = colnames(exs))) +
-  geom_point(size = 7) +
-  geom_text(size = 0.8, color = "white") +
-  theme_bw()
+print(
+  ggplot(pcr, aes(PC1, PC2, color = Group, label = colnames(exs))) +
+    geom_point(size = 7) +
+    geom_text(size = 0.8, color = "white") +
+    theme_bw()
+)
 dev.off()
 
 png(file.path(out_dir, "Heatmap_allm.png"), width = 720, height = 950)
@@ -151,23 +176,25 @@ cont.matrix <- makeContrasts(terato - normo, levels = design)
 fit2 <- contrasts.fit(fit, cont.matrix)
 fit3 <- eBayes(fit2, 0.01)
 tT <- topTable(fit3, adjust = "fdr", sort.by = "B", number = Inf)
+tT$GB_ACC <- rownames(tT)
 tT <- subset(tT, select = c("GB_ACC", "adj.P.Val", "logFC"))
 
-write.csv(tT, file.path(out_dir, "terato-normo.csv"))
+write.csv(tT, file.path(out_dir, "terato-normo.csv"), row.names = FALSE)
 
 updif <- subset(tT, logFC > 1 & adj.P.Val < 0.01)
 downdif <- subset(tT, logFC < (-1) & adj.P.Val < 0.01)
 alldif <- rbind(updif, downdif)
 
-write.csv(updif, file.path(out_dir, "Up-DEGs1.csv"))
-write.csv(downdif, file.path(out_dir, "Down-DEGs1.csv"))
-write.csv(alldif, file.path(out_dir, "all-DEGs1.csv"))
+write.csv(updif, file.path(out_dir, "Up-DEGs1.csv"), row.names = FALSE)
+write.csv(downdif, file.path(out_dir, "Down-DEGs1.csv"), row.names = FALSE)
+write.csv(alldif, file.path(out_dir, "all-DEGs1.csv"), row.names = FALSE)
 
-allm_t <- t(allm)
+allm_t <- as.data.frame(t(allm))
+allm_t$id <- rownames(allm_t)
 write.csv(allm_t, file.path(out_dir, "transposed_allm.csv"))
 
-allm_t <- as.data.frame(allm_t)
-allm_t$id <- rownames(allm_t)
-alldif$id <- rownames(alldif)
-plotd <- subset(allm_t, id %in% alldif$id)
+# Expression matrix (genes x samples) restricted to the DEGs
+plotd <- allm[rownames(allm) %in% alldif$GB_ACC, , drop = FALSE]
 write.csv(plotd, file.path(out_dir, "DEGs-Matrix.csv"))
+
+sessionInfo()
